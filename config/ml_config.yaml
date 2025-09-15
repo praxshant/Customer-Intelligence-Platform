@@ -1,0 +1,78 @@
+# Machine Learning configuration
+
+segmentation:
+  algorithm: "kmeans"
+  parameters:
+    max_clusters: 10
+    random_state: 42
+    n_init: 10
+    max_iter: 300
+    tol: 0.0001
+  feature_columns:
+    - "total_spent"
+    - "avg_transaction_amount"
+    - "transaction_count"
+    - "avg_monthly_spend"
+    - "transaction_frequency"
+    - "recency_days"
+    - "unique_merchants"
+  preprocessing:
+    scale_features: true
+    handle_outliers: true
+    outlier_method: "iqr"
+    log_transform_skewed: true
+  evaluation:
+    metrics:
+      - "silhouette_score"
+      - "calinski_harabasz_score"
+      - "inertia"
+    optimal_cluster_method: "elbow_silhouette"
+
+recommendation:
+  algorithm: "collaborative_filtering"
+  parameters:
+    min_interactions: 5
+    top_n_recommendations: 10
+    similarity_metric: "cosine"
+  features:
+    - "customer_id"
+    - "category"
+    - "amount"
+    - "transaction_date"
+  evaluation:
+    metrics:
+      - "precision_at_k"
+      - "recall_at_k"
+      - "ndcg_at_k"
+
+model_persistence:
+  save_models: true
+  model_path: "data/models/"
+  model_format: "pickle"
+  version_control: true
+  backup_models: true
+
+feature_engineering:
+  customer_features:
+    - "total_spent"
+    - "avg_transaction_amount"
+    - "transaction_count"
+    - "avg_monthly_spend"
+    - "transaction_frequency"
+    - "recency_days"
+    - "unique_merchants"
+    - "customer_lifetime_days"
+  category_features:
+    - "category_spending_distribution"
+    - "primary_category"
+    - "category_diversity"
+  temporal_features:
+    - "seasonal_spending_pattern"
+    - "weekday_weekend_ratio"
+    - "monthly_trend"
+
+hyperparameter_tuning:
+  enabled: false
+  method: "grid_search"
+  cv_folds: 5
+  scoring: "silhouette_score" 

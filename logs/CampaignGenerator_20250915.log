@@ -1,0 +1,6 @@
+2025-09-15 00:35:54,042 CampaignGenerator INFO Generated 159 campaigns for segment: Low-Value-Occasional-Active
+2025-09-15 00:35:54,077 CampaignGenerator INFO Generated 29 campaigns for segment: Medium-Value-Occasional-Active
+2025-09-15 00:35:54,085 CampaignGenerator INFO Generated 1 campaigns for segment: Medium-Value-Regular-Active
+2025-09-15 00:35:54,125 CampaignGenerator INFO Generated 48 campaigns for segment: Low-Value-Rare-Inactive
+2025-09-15 00:35:54,696 CampaignGenerator INFO Generated 763 campaigns for segment: High-Value-Frequent-Active
+2025-09-15 00:35:54,761 CampaignGenerator INFO Optimized portfolio: 833 campaigns selected with budget $5000

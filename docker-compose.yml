@@ -1,0 +1,343 @@
+version: '3.8'
+
+services:
+  # Main Application
+  cicop-app:
+    build:
+      context: .
+      target: development
+    ports:
+      - "8501:8501"  # Streamlit dashboard
+      - "8000:8000"  # Main API
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=postgresql://cicop_user:cicop_pass@cicop-db:5432/cicop_db
+      - REDIS_URL=redis://cicop-redis:6379
+      - ENVIRONMENT=development
+    depends_on:
+      - cicop-db
+      - cicop-redis
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Production Application
+  cicop-app-prod:
+    build:
+      context: .
+      target: production
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://cicop_user:cicop_pass@cicop-db:5432/cicop_db
+      - REDIS_URL=redis://cicop-redis:6379
+      - ENVIRONMENT=production
+    depends_on:
+      - cicop-db
+      - cicop-redis
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # ML Model Serving
+  cicop-ml-serving:
+    build:
+      context: .
+      target: ml-serving
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - MODEL_SERVING_PORT=8001
+      - REDIS_URL=redis://cicop-redis:6379
+    depends_on:
+      - cicop-redis
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # API Gateway
+  cicop-api-gateway:
+    build:
+      context: .
+      target: api-gateway
+    ports:
+      - "8002:8002"
+    environment:
+      - API_GATEWAY_PORT=8002
+      - REDIS_URL=redis://cicop-redis:6379
+      - ML_SERVING_URL=http://cicop-ml-serving:8001
+    depends_on:
+      - cicop-ml-serving
+      - cicop-redis
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Worker Processes
+  cicop-worker:
+    build:
+      context: .
+      target: worker
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=postgresql://cicop_user:cicop_pass@cicop-db:5432/cicop_db
+      - REDIS_URL=redis://cicop-redis:6379
+      - CELERY_BROKER_URL=redis://cicop-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://cicop-redis:6379/0
+    depends_on:
+      - cicop-db
+      - cicop-redis
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    command: celery -A src.workers.celery_app worker --loglevel=info --concurrency=4
+
+  # Celery Beat Scheduler
+  cicop-scheduler:
+    build:
+      context: .
+      target: worker
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://cicop_user:cicop_pass@cicop-db:5432/cicop_db
+      - REDIS_URL=redis://cicop-redis:6379
+      - CELERY_BROKER_URL=redis://cicop-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://cicop-redis:6379/0
+    depends_on:
+      - cicop-db
+      - cicop-redis
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    command: celery -A src.workers.celery_app beat --loglevel=info
+
+  # PostgreSQL Database
+  cicop-db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=cicop_db
+      - POSTGRES_USER=cicop_user
+      - POSTGRES_PASSWORD=cicop_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cicop_user -d cicop_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  cicop-redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB (for document storage)
+  cicop-mongodb:
+    image: mongo:5
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=cicop_admin
+      - MONGO_INITDB_ROOT_PASSWORD=cicop_admin_pass
+      - MONGO_INITDB_DATABASE=cicop_docs
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Elasticsearch (for search and analytics)
+  cicop-elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - cicop-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kibana (for Elasticsearch visualization)
+  cicop-kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://cicop-elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - cicop-elasticsearch
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Apache Kafka (for stream processing)
+  cicop-kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: cicop-zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://cicop-kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    depends_on:
+      - cicop-zookeeper
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Zookeeper (for Kafka)
+  cicop-zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Apache Spark (for big data processing)
+  cicop-spark-master:
+    image: bitnami/spark:3.4
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  cicop-spark-worker:
+    image: bitnami/spark:3.4
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://cicop-spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    depends_on:
+      - cicop-spark-master
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Monitoring and Observability
+  cicop-prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  cicop-grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - cicop-prometheus
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  cicop-nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - cicop-app
+      - cicop-api-gateway
+    networks:
+      - cicop-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongodb_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  cicop-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

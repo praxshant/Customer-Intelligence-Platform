@@ -1,0 +1,51 @@
+# Main configuration file for Customer Spending Insights
+
+database:
+  path: "data/customer_insights.db"
+  backup_enabled: true
+  backup_interval_days: 7
+
+ml_models:
+  segmentation:
+    algorithm: "kmeans"
+    max_clusters: 10
+    random_state: 42
+    n_init: 10
+  recommendation:
+    algorithm: "collaborative_filtering"
+    min_interactions: 5
+    top_n_recommendations: 10
+
+dashboard:
+  title: "Customer Spending Insights Dashboard"
+  theme: "light"
+  page_size: 20
+  refresh_interval: 300  # seconds
+
+rules_engine:
+  campaign_types:
+    - "loyalty_reward"
+    - "win_back"
+    - "cross_sell"
+    - "seasonal_promotion"
+  min_discount_amount: 5.0
+  max_discount_amount: 100.0
+  campaign_validity_days: 30
+
+data_processing:
+  supported_formats: ["csv", "xlsx", "json"]
+  date_format: "%Y-%m-%d"
+  currency_symbol: "$"
+  decimal_places: 2
+
+logging:
+  level: "INFO"
+  file_rotation: "daily"
+  max_file_size_mb: 10
+  backup_count: 7
+
+features:
+  enable_real_time_updates: true
+  enable_export_functionality: true
+  enable_email_notifications: false
+  enable_advanced_analytics: true 

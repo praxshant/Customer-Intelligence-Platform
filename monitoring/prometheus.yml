@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'api-gateway'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['cicop-api-gateway:8002']
+
+  - job_name: 'ml-serving'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['cicop-ml-serving:8001']
+
+  - job_name: 'cicop-app'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['cicop-app:8000']

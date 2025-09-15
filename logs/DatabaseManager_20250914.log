@@ -1,0 +1,4 @@
+2025-09-14 19:31:36,402 - DatabaseManager - INFO - Inserted 1000 records into customers
+2025-09-14 19:31:36,476 - DatabaseManager - INFO - Inserted 15261 records into transactions
+2025-09-14 19:31:36,505 - DatabaseManager - INFO - Inserted 1000 records into customer_segments
+2025-09-14 19:31:36,536 - DatabaseManager - INFO - Inserted 1985 records into campaigns

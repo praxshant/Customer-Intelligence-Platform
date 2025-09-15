@@ -1,0 +1,28 @@
+FROM python:3.9-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app
+
+RUN groupadd -r cicop && useradd -r -g cicop -d /app -s /bin/bash cicop
+
+RUN apt-get update && apt-get install -y \
+    gcc g++ libpq-dev curl \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY --chown=cicop:cicop . .
+RUN mkdir -p /app/data /app/logs /app/models && chown -R cicop:cicop /app
+
+USER cicop
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

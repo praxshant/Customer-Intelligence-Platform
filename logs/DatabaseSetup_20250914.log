@@ -1,0 +1,16 @@
+2025-09-14 19:25:41,061 - DatabaseSetup - INFO - Starting database setup...
+2025-09-14 19:25:41,125 - DatabaseSetup - INFO - Database manager initialized successfully
+2025-09-14 19:25:41,144 - DatabaseSetup - INFO - Database statistics: {'customers': 0, 'transactions': 0, 'customer_segments': 0, 'campaigns': 0}
+2025-09-14 19:25:41,162 - DatabaseSetup - INFO - Database setup completed successfully!
+2025-09-14 19:31:10,863 - DatabaseSetup - INFO - Starting database setup...
+2025-09-14 19:31:10,865 - DatabaseSetup - INFO - Database manager initialized successfully
+2025-09-14 19:31:10,869 - DatabaseSetup - INFO - Database statistics: {'customers': 0, 'transactions': 0, 'customer_segments': 0, 'campaigns': 0}
+2025-09-14 19:31:10,878 - DatabaseSetup - INFO - Database setup completed successfully!
+2025-09-14 23:50:04,797 DatabaseSetup INFO Starting database setup...
+2025-09-14 23:50:04,801 DatabaseSetup INFO Database manager initialized successfully
+2025-09-14 23:50:04,822 DatabaseSetup INFO Database statistics: {'customers': 1000, 'transactions': 15261, 'customer_segments': 1000, 'campaigns': 1985}
+2025-09-14 23:50:04,830 DatabaseSetup INFO Database setup completed successfully!
+2025-09-14 23:56:24,211 DatabaseSetup INFO Starting database setup...
+2025-09-14 23:56:24,268 DatabaseSetup INFO Database manager initialized successfully
+2025-09-14 23:56:24,272 DatabaseSetup INFO Database statistics: {'customers': 1000, 'transactions': 15810, 'customer_segments': 1000, 'campaigns': 1984}
+2025-09-14 23:56:24,282 DatabaseSetup INFO Database setup completed successfully!

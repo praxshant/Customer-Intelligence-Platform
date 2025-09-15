@@ -1,0 +1,72 @@
+# Database configuration
+
+database:
+  type: "sqlite"
+  path: "data/customer_insights.db"
+  timeout: 30
+  check_same_thread: false
+
+tables:
+  customers:
+    columns:
+      - customer_id: "TEXT PRIMARY KEY"
+      - first_name: "TEXT"
+      - last_name: "TEXT"
+      - email: "TEXT"
+      - registration_date: "DATE"
+      - age: "INTEGER"
+      - gender: "TEXT"
+      - location: "TEXT"
+    indexes:
+      - "idx_customers_email"
+      - "idx_customers_location"
+  
+  transactions:
+    columns:
+      - transaction_id: "TEXT PRIMARY KEY"
+      - customer_id: "TEXT"
+      - transaction_date: "DATE"
+      - amount: "REAL"
+      - category: "TEXT"
+      - subcategory: "TEXT"
+      - merchant: "TEXT"
+      - payment_method: "TEXT"
+    foreign_keys:
+      - customer_id: "customers(customer_id)"
+    indexes:
+      - "idx_transactions_customer_id"
+      - "idx_transactions_date"
+      - "idx_transactions_category"
+  
+  customer_segments:
+    columns:
+      - customer_id: "TEXT PRIMARY KEY"
+      - segment_id: "INTEGER"
+      - segment_name: "TEXT"
+      - last_updated: "DATE"
+    foreign_keys:
+      - customer_id: "customers(customer_id)"
+    indexes:
+      - "idx_segments_segment_id"
+  
+  campaigns:
+    columns:
+      - campaign_id: "TEXT PRIMARY KEY"
+      - customer_id: "TEXT"
+      - campaign_type: "TEXT"
+      - offer_description: "TEXT"
+      - discount_amount: "REAL"
+      - created_date: "DATE"
+      - status: "TEXT"
+    foreign_keys:
+      - customer_id: "customers(customer_id)"
+    indexes:
+      - "idx_campaigns_customer_id"
+      - "idx_campaigns_type"
+      - "idx_campaigns_status"
+
+backup:
+  enabled: true
+  interval_days: 7
+  max_backups: 10
+  backup_path: "data/backups/" 
